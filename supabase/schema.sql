@@ -7,6 +7,7 @@ CREATE TABLE appointments (
   visit_type           text NOT NULL,
   status               text NOT NULL DEFAULT 'pending'
                        CHECK (status IN ('pending', 'confirmed', 'cancelled', 'no_response')),
+  duration_minutes     integer NOT NULL DEFAULT 30,
   created_at           timestamptz DEFAULT now()
 );
 

@@ -14,24 +14,44 @@ const VISIT_TYPES = [
   'Inne',
 ]
 
-const todayLocalISO = () => {
-  const now = new Date()
-  const yyyy = now.getFullYear()
-  const mm = String(now.getMonth() + 1).padStart(2, '0')
-  const dd = String(now.getDate()).padStart(2, '0')
-  const hh = String(now.getHours()).padStart(2, '0')
-  const min = String(now.getMinutes()).padStart(2, '0')
+const DURATION_OPTIONS = [
+  { value: 15, label: '15 min' },
+  { value: 30, label: '30 min' },
+  { value: 45, label: '45 min' },
+  { value: 60, label: '1 godz.' },
+  { value: 90, label: '1:30 godz.' },
+  { value: 120, label: '2 godz.' },
+]
+
+function toLocalISO(date) {
+  const d = new Date(date)
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  const hh = String(d.getHours()).padStart(2, '0')
+  const min = String(d.getMinutes()).padStart(2, '0')
   return `${yyyy}-${mm}-${dd}T${hh}:${min}`
 }
 
-const EMPTY = { patient_name: '', phone: '', appointment_datetime: todayLocalISO(), visit_type: VISIT_TYPES[0] }
+function makeEmpty(initialDateTime) {
+  return {
+    patient_name: '',
+    phone: '',
+    appointment_datetime: initialDateTime ? toLocalISO(initialDateTime) : toLocalISO(new Date()),
+    visit_type: VISIT_TYPES[0],
+    duration_minutes: 30,
+  }
+}
 
-export default function AppointmentForm({ onAdded }) {
-  const [form, setForm] = useState(EMPTY)
+export default function AppointmentForm({ initialDateTime, onAdded, onCancel }) {
+  const [form, setForm] = useState(() => makeEmpty(initialDateTime))
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
-  const set = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }))
+  const set = (field) => (e) => {
+    const val = field === 'duration_minutes' ? Number(e.target.value) : e.target.value
+    setForm((f) => ({ ...f, [field]: val }))
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -43,6 +63,7 @@ export default function AppointmentForm({ onAdded }) {
       phone: form.phone.trim(),
       appointment_datetime: new Date(form.appointment_datetime).toISOString(),
       visit_type: form.visit_type,
+      duration_minutes: form.duration_minutes,
       status: 'pending',
     })
 
@@ -51,7 +72,6 @@ export default function AppointmentForm({ onAdded }) {
       setError('Błąd zapisu: ' + err.message)
       return
     }
-    setForm(EMPTY)
     onAdded?.()
   }
 
@@ -61,19 +81,25 @@ export default function AppointmentForm({ onAdded }) {
       className="card p-6"
       style={{ borderTop: '1px solid rgba(59, 130, 246, 0.3)' }}
     >
-      <div className="flex items-center gap-2 mb-5">
-        <div
-          style={{
-            width: 6,
-            height: 6,
-            borderRadius: '50%',
-            background: '#3b82f6',
-            boxShadow: '0 0 8px rgba(59,130,246,0.8)',
-          }}
-        />
-        <h2 className="text-sm font-semibold tracking-wide" style={{ color: '#e4e4e7' }}>
-          Nowa wizyta
-        </h2>
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-2">
+          <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#3b82f6', boxShadow: '0 0 8px rgba(59,130,246,0.8)' }} />
+          <h2 className="text-sm font-semibold tracking-wide" style={{ color: '#e4e4e7' }}>
+            Nowa wizyta
+          </h2>
+        </div>
+        {onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="text-xs transition-colors"
+            style={{ color: '#52525b' }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#a1a1aa' }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#52525b' }}
+          >
+            ✕ Anuluj
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -119,6 +145,28 @@ export default function AppointmentForm({ onAdded }) {
 
         <div>
           <label className="block text-xs font-medium mb-1.5 tracking-wide" style={{ color: '#52525b' }}>
+            Czas trwania
+          </label>
+          <div className="relative">
+            <select
+              value={form.duration_minutes}
+              onChange={set('duration_minutes')}
+              className="input-dark appearance-none pr-8 cursor-pointer"
+            >
+              {DURATION_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center">
+              <svg className="w-3.5 h-3.5" style={{ color: '#52525b' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div className="sm:col-span-2">
+          <label className="block text-xs font-medium mb-1.5 tracking-wide" style={{ color: '#52525b' }}>
             Rodzaj wizyty
           </label>
           <div className="relative">
@@ -141,24 +189,13 @@ export default function AppointmentForm({ onAdded }) {
       </div>
 
       {error && (
-        <p
-          className="text-xs mt-4 px-3 py-2 rounded-lg"
-          style={{
-            color: '#f87171',
-            background: 'rgba(248,113,113,0.08)',
-            border: '1px solid rgba(248,113,113,0.15)',
-          }}
-        >
+        <p className="text-xs mt-4 px-3 py-2 rounded-lg" style={{ color: '#f87171', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.15)' }}>
           {error}
         </p>
       )}
 
       <div className="mt-5">
-        <button
-          type="submit"
-          disabled={loading}
-          className="btn-primary px-6 py-2.5"
-        >
+        <button type="submit" disabled={loading} className="btn-primary px-6 py-2.5">
           {loading ? 'Zapisywanie…' : 'Dodaj wizytę'}
         </button>
       </div>
