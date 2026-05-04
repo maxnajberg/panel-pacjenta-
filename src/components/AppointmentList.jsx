@@ -27,9 +27,18 @@ function CopyLink({ id }) {
     <button
       onClick={copy}
       title="Kopiuj link dla pacjenta"
-      className="text-xs text-blue-600 hover:text-blue-800 underline underline-offset-2 whitespace-nowrap"
+      className="text-xs font-medium transition-all duration-200 whitespace-nowrap px-2.5 py-1 rounded-md"
+      style={copied ? {
+        color: '#4ade80',
+        background: 'rgba(74,222,128,0.08)',
+        border: '1px solid rgba(74,222,128,0.2)',
+      } : {
+        color: '#3b82f6',
+        background: 'rgba(59,130,246,0.07)',
+        border: '1px solid rgba(59,130,246,0.18)',
+      }}
     >
-      {copied ? 'Skopiowano!' : 'Kopiuj link'}
+      {copied ? '✓ Skopiowano' : 'Kopiuj link'}
     </button>
   )
 }
@@ -46,62 +55,90 @@ function StatusSelect({ appointmentId, current, onChanged }) {
   }
 
   return (
-    <select
-      value={current}
-      onChange={handleChange}
-      disabled={loading}
-      className="border border-gray-200 rounded-md text-xs px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50"
-    >
-      {STATUS_OPTIONS.map((opt) => (
-        <option key={opt.value} value={opt.value}>{opt.label}</option>
-      ))}
-    </select>
+    <div className="relative">
+      <select
+        value={current}
+        onChange={handleChange}
+        disabled={loading}
+        className="appearance-none text-xs pl-2.5 pr-7 py-1.5 rounded-md cursor-pointer focus:outline-none transition-all duration-150 disabled:opacity-40"
+        style={{
+          background: '#16161e',
+          border: '1px solid rgba(255,255,255,0.08)',
+          color: '#a1a1aa',
+          fontFamily: 'Inter, system-ui, sans-serif',
+        }}
+        onFocus={e => { e.target.style.borderColor = 'rgba(59,130,246,0.4)'; e.target.style.boxShadow = '0 0 0 2px rgba(59,130,246,0.08)' }}
+        onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.08)'; e.target.style.boxShadow = 'none' }}
+      >
+        {STATUS_OPTIONS.map((opt) => (
+          <option key={opt.value} value={opt.value}>{opt.label}</option>
+        ))}
+      </select>
+      <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
+        <svg className="w-3 h-3" style={{ color: '#52525b' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </div>
+    </div>
   )
 }
 
 export default function AppointmentList({ appointments, onStatusChanged }) {
   if (appointments.length === 0) {
     return (
-      <div className="text-center py-16 text-gray-400 text-sm">
-        Brak wizyt na dziś.
+      <div className="text-center py-20" style={{ color: '#27272a' }}>
+        <div className="text-4xl mb-3 opacity-40">📋</div>
+        <p className="text-sm" style={{ color: '#3f3f46' }}>Brak wizyt na dziś</p>
       </div>
     )
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-gray-200 shadow-sm">
+    <div className="overflow-x-auto rounded-[0.875rem]" style={{ background: '#111118', border: '1px solid rgba(255,255,255,0.07)' }}>
       <table className="w-full text-sm">
-        <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
-          <tr>
-            <th className="px-4 py-3 text-left">Godzina</th>
-            <th className="px-4 py-3 text-left">Pacjent</th>
-            <th className="px-4 py-3 text-left">Telefon</th>
-            <th className="px-4 py-3 text-left">Rodzaj wizyty</th>
-            <th className="px-4 py-3 text-left">Status</th>
-            <th className="px-4 py-3 text-left">Zmień status</th>
-            <th className="px-4 py-3 text-left">Link pacjenta</th>
+        <thead>
+          <tr style={{ background: '#0a0a10', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            {['Godzina', 'Pacjent', 'Telefon', 'Rodzaj wizyty', 'Status', 'Zmień status', 'Link pacjenta'].map((h) => (
+              <th
+                key={h}
+                className="px-5 py-3.5 text-left font-semibold whitespace-nowrap"
+                style={{ fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#3f3f46' }}
+              >
+                {h}
+              </th>
+            ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-100 bg-white">
-          {appointments.map((appt) => (
-            <tr key={appt.id} className="hover:bg-gray-50 transition-colors">
-              <td className="px-4 py-3 font-mono font-medium text-gray-800 whitespace-nowrap">
+        <tbody>
+          {appointments.map((appt, i) => (
+            <tr
+              key={appt.id}
+              className="tr-hover"
+              style={{ borderBottom: i < appointments.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}
+            >
+              <td className="px-5 py-3.5 whitespace-nowrap" style={{ fontFamily: 'monospace', fontWeight: 600, color: '#e4e4e7', letterSpacing: '0.02em' }}>
                 {formatTime(appt.appointment_datetime)}
               </td>
-              <td className="px-4 py-3 font-medium text-gray-800">{appt.patient_name}</td>
-              <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{appt.phone}</td>
-              <td className="px-4 py-3 text-gray-600">{appt.visit_type}</td>
-              <td className="px-4 py-3">
+              <td className="px-5 py-3.5 font-medium whitespace-nowrap" style={{ color: '#d4d4d8' }}>
+                {appt.patient_name}
+              </td>
+              <td className="px-5 py-3.5 whitespace-nowrap" style={{ color: '#71717a', fontVariantNumeric: 'tabular-nums' }}>
+                {appt.phone}
+              </td>
+              <td className="px-5 py-3.5" style={{ color: '#71717a' }}>
+                {appt.visit_type}
+              </td>
+              <td className="px-5 py-3.5">
                 <StatusBadge status={appt.status} />
               </td>
-              <td className="px-4 py-3">
+              <td className="px-5 py-3.5">
                 <StatusSelect
                   appointmentId={appt.id}
                   current={appt.status}
                   onChanged={onStatusChanged}
                 />
               </td>
-              <td className="px-4 py-3">
+              <td className="px-5 py-3.5">
                 <CopyLink id={appt.id} />
               </td>
             </tr>

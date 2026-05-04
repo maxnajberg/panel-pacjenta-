@@ -23,6 +23,36 @@ const STATUS_FILTER_OPTIONS = [
   { value: 'no_response', label: 'Brak odpowiedzi' },
 ]
 
+const STAT_CARDS = (counts) => [
+  {
+    label: 'Wszystkich wizyt',
+    value: counts.total,
+    color: '#e4e4e7',
+    borderColor: 'rgba(228,228,231,0.15)',
+  },
+  {
+    label: 'Potwierdzonych',
+    value: counts.confirmed,
+    color: '#4ade80',
+    borderColor: 'rgba(74,222,128,0.3)',
+    glow: 'rgba(74,222,128,0.06)',
+  },
+  {
+    label: 'Oczekujących',
+    value: counts.pending,
+    color: '#facc15',
+    borderColor: 'rgba(250,204,21,0.28)',
+    glow: 'rgba(250,204,21,0.05)',
+  },
+  {
+    label: 'Anulowanych',
+    value: counts.cancelled,
+    color: '#f87171',
+    borderColor: 'rgba(248,113,113,0.28)',
+    glow: 'rgba(248,113,113,0.05)',
+  },
+]
+
 export default function Dashboard() {
   const [appointments, setAppointments] = useState([])
   const [loading, setLoading] = useState(true)
@@ -69,39 +99,90 @@ export default function Dashboard() {
     no_response: appointments.filter((a) => a.status === 'no_response').length,
   }
 
+  const cards = STAT_CARDS(counts)
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 shadow-sm">
+    <div className="min-h-screen" style={{ background: '#0a0a0a' }}>
+
+      {/* Ambient gradient top */}
+      <div
+        className="fixed top-0 left-0 right-0 pointer-events-none"
+        style={{
+          height: 300,
+          background: 'radial-gradient(ellipse 80% 60% at 50% -10%, rgba(59,130,246,0.07) 0%, transparent 70%)',
+          zIndex: 0,
+        }}
+      />
+
+      {/* Header */}
+      <header
+        className="relative z-10 sticky top-0"
+        style={{
+          background: 'rgba(10,10,10,0.85)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          borderBottom: '1px solid rgba(255,255,255,0.07)',
+        }}
+      >
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-2xl">🦷</span>
+            <div
+              style={{
+                width: 38,
+                height: 38,
+                background: 'rgba(201,168,76,0.1)',
+                border: '1px solid rgba(201,168,76,0.22)',
+                borderRadius: 10,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '1.1rem',
+                flexShrink: 0,
+              }}
+            >
+              🦷
+            </div>
             <div>
-              <h1 className="text-lg font-bold text-gray-900 leading-tight">Panel Recepcji</h1>
-              <p className="text-xs text-gray-500 capitalize">{formatDatePL(new Date())}</p>
+              <h1 className="text-sm font-semibold tracking-wide" style={{ color: '#e4e4e7' }}>
+                Panel Recepcji
+              </h1>
+              <p className="text-xs capitalize" style={{ color: '#3f3f46', marginTop: 1 }}>
+                {formatDatePL(new Date())}
+              </p>
             </div>
           </div>
+
           <button
             onClick={() => setShowForm((v) => !v)}
-            className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+            className="btn-primary px-4 py-2"
           >
             {showForm ? 'Ukryj formularz' : '+ Dodaj wizytę'}
           </button>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+      {/* Main content */}
+      <main className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-6">
 
-        {/* Summary cards */}
+        {/* Stat cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { label: 'Wszystkich wizyt', value: counts.total, color: 'text-gray-800' },
-            { label: 'Potwierdzonych', value: counts.confirmed, color: 'text-green-700' },
-            { label: 'Oczekujących', value: counts.pending, color: 'text-yellow-700' },
-            { label: 'Anulowanych', value: counts.cancelled, color: 'text-red-700' },
-          ].map((card) => (
-            <div key={card.label} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-              <div className={`text-2xl font-bold ${card.color}`}>{card.value}</div>
-              <div className="text-xs text-gray-500 mt-0.5">{card.label}</div>
+          {cards.map((card) => (
+            <div
+              key={card.label}
+              className="card p-5 transition-all duration-300"
+              style={{
+                borderTop: `1px solid ${card.borderColor}`,
+                background: card.glow
+                  ? `radial-gradient(ellipse 80% 60% at 50% 0%, ${card.glow}, transparent), #111118`
+                  : '#111118',
+              }}
+            >
+              <div className="text-3xl font-bold" style={{ color: card.color, lineHeight: 1.1 }}>
+                {card.value}
+              </div>
+              <div className="mt-1.5 text-xs tracking-wide" style={{ color: '#3f3f46' }}>
+                {card.label}
+              </div>
             </div>
           ))}
         </div>
@@ -111,29 +192,52 @@ export default function Dashboard() {
           <AppointmentForm onAdded={() => { fetchAppointments(); setShowForm(false) }} />
         )}
 
-        {/* Filter tabs */}
-        <div className="flex gap-2 flex-wrap">
-          {STATUS_FILTER_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => setFilter(opt.value)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${
-                filter === opt.value
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
+        {/* Section header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-semibold tracking-widest uppercase" style={{ color: '#3f3f46' }}>
+              Wizyty dzisiaj
+            </span>
+            <div style={{ height: 1, width: 24, background: 'rgba(255,255,255,0.07)' }} />
+          </div>
+
+          {/* Filter tabs */}
+          <div className="flex gap-1.5 flex-wrap">
+            {STATUS_FILTER_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setFilter(opt.value)}
+                className="px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200"
+                style={filter === opt.value ? {
+                  background: 'rgba(59,130,246,0.12)',
+                  color: '#60a5fa',
+                  border: '1px solid rgba(59,130,246,0.28)',
+                  boxShadow: '0 0 12px rgba(59,130,246,0.1)',
+                } : {
+                  background: 'rgba(255,255,255,0.03)',
+                  color: '#52525b',
+                  border: '1px solid rgba(255,255,255,0.07)',
+                }}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Appointments list */}
+        {/* Appointment list */}
         {loading ? (
-          <div className="text-center py-16 text-gray-400 text-sm">Ładowanie…</div>
+          <div className="flex items-center justify-center py-20 gap-2.5" style={{ color: '#27272a' }}>
+            <div
+              className="w-4 h-4 rounded-full border-2 border-t-transparent animate-spin"
+              style={{ borderColor: 'rgba(59,130,246,0.4)', borderTopColor: 'transparent' }}
+            />
+            <span className="text-sm" style={{ color: '#3f3f46' }}>Ładowanie…</span>
+          </div>
         ) : (
           <AppointmentList appointments={filtered} onStatusChanged={handleStatusChanged} />
         )}
+
       </main>
     </div>
   )

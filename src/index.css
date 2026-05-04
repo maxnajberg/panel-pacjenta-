@@ -1,1 +1,159 @@
 @import "tailwindcss";
+
+@theme {
+  --font-sans: 'Inter', system-ui, sans-serif;
+}
+
+@layer base {
+  html, body {
+    background-color: #0a0a0a;
+    color: #e4e4e7;
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0a0a0a;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #27272a;
+    border-radius: 99px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #3f3f46;
+  }
+
+  input[type='datetime-local']::-webkit-calendar-picker-indicator {
+    filter: invert(0.5) brightness(0.8);
+    cursor: pointer;
+  }
+
+  select option {
+    background-color: #16161e;
+    color: #e4e4e7;
+  }
+}
+
+/* Shared card */
+.card {
+  background-color: #111118;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 0.875rem;
+}
+
+/* Input base */
+.input-dark {
+  width: 100%;
+  background-color: #0c0c14;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  color: #e4e4e7;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  font-family: 'Inter', system-ui, sans-serif;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+}
+.input-dark::placeholder {
+  color: #3f3f46;
+}
+.input-dark:focus {
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.08);
+}
+
+/* Primary action button */
+.btn-primary {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  font-weight: 500;
+  font-size: 0.875rem;
+  border-radius: 0.5rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 0 18px rgba(59, 130, 246, 0.28);
+  font-family: 'Inter', system-ui, sans-serif;
+}
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #4d8ef5 0%, #3b7de8 100%);
+  box-shadow: 0 0 28px rgba(59, 130, 246, 0.45);
+  transform: translateY(-1px);
+}
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+.btn-primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Confirm/cancel buttons for ConfirmPage */
+.btn-confirm {
+  width: 100%;
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+  color: white;
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.2);
+  font-family: 'Inter', system-ui, sans-serif;
+}
+.btn-confirm:hover:not(:disabled) {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  box-shadow: 0 0 32px rgba(34, 197, 94, 0.35);
+  transform: translateY(-1px);
+}
+.btn-confirm:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-cancel-outline {
+  width: 100%;
+  background: rgba(248, 113, 113, 0.05);
+  color: #f87171;
+  font-weight: 500;
+  font-size: 0.875rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(248, 113, 113, 0.2);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+.btn-cancel-outline:hover:not(:disabled) {
+  background: rgba(248, 113, 113, 0.1);
+  border-color: rgba(248, 113, 113, 0.35);
+  box-shadow: 0 0 20px rgba(248, 113, 113, 0.12);
+  transform: translateY(-1px);
+}
+.btn-cancel-outline:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Table row hover */
+.tr-hover {
+  transition: background-color 0.15s;
+}
+.tr-hover:hover {
+  background-color: rgba(255, 255, 255, 0.025);
+}
+
+/* Gold gradient text */
+.text-gold {
+  background: linear-gradient(135deg, #c9a84c 0%, #e8c96d 50%, #c9a84c 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
