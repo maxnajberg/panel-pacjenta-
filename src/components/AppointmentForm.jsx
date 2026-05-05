@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../contexts/AuthContext'
 
 const VISIT_TYPES = [
   'Kontrola',
@@ -15,12 +16,12 @@ const VISIT_TYPES = [
 ]
 
 const DURATION_OPTIONS = [
-  { value: 15, label: '15 min' },
-  { value: 30, label: '30 min' },
-  { value: 45, label: '45 min' },
-  { value: 60, label: '1 godz.' },
-  { value: 90, label: '1:30 godz.' },
-  { value: 120, label: '2 godz.' },
+  { value: 15,  label: '15 min'     },
+  { value: 30,  label: '30 min'     },
+  { value: 45,  label: '45 min'     },
+  { value: 60,  label: '1 godz.'    },
+  { value: 90,  label: '1:30 godz.' },
+  { value: 120, label: '2 godz.'    },
 ]
 
 function toLocalISO(date) {
@@ -40,13 +41,49 @@ function makeEmpty(initialDateTime) {
     appointment_datetime: initialDateTime ? toLocalISO(initialDateTime) : toLocalISO(new Date()),
     visit_type: VISIT_TYPES[0],
     duration_minutes: 30,
+    doctor_id: '',
+    notes: '',
   }
 }
 
+function SelectChevron() {
+  return (
+    <div className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center">
+      <svg className="w-3.5 h-3.5" style={{ color: '#52525b' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+      </svg>
+    </div>
+  )
+}
+
 export default function AppointmentForm({ initialDateTime, onAdded, onCancel }) {
+  const { role, user } = useAuth()
   const [form, setForm] = useState(() => makeEmpty(initialDateTime))
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [doctors, setDoctors] = useState([])
+
+  const isDoctor = role === 'doctor'
+  const canSeeMedical = role === 'admin' || role === 'doctor'
+
+  // Fetch doctors for the assignment dropdown (admin/receptionist only)
+  useEffect(() => {
+    if (isDoctor) return
+    supabase
+      .from('profiles')
+      .select('id, full_name')
+      .eq('role', 'doctor')
+      .eq('active', true)
+      .order('full_name')
+      .then(({ data }) => setDoctors(data ?? []))
+  }, [isDoctor])
+
+  // Pre-set doctor_id for doctor role
+  useEffect(() => {
+    if (isDoctor && user) {
+      setForm((f) => ({ ...f, doctor_id: user.id }))
+    }
+  }, [isDoctor, user])
 
   const set = (field) => (e) => {
     const val = field === 'duration_minutes' ? Number(e.target.value) : e.target.value
@@ -58,14 +95,18 @@ export default function AppointmentForm({ initialDateTime, onAdded, onCancel }) 
     setLoading(true)
     setError(null)
 
-    const { error: err } = await supabase.from('appointments').insert({
-      patient_name: form.patient_name.trim(),
-      phone: form.phone.trim(),
+    const payload = {
+      patient_name:         form.patient_name.trim(),
+      phone:                form.phone.trim(),
       appointment_datetime: new Date(form.appointment_datetime).toISOString(),
-      visit_type: form.visit_type,
-      duration_minutes: form.duration_minutes,
-      status: 'pending',
-    })
+      visit_type:           form.visit_type,
+      duration_minutes:     form.duration_minutes,
+      status:               'pending',
+      doctor_id:            form.doctor_id || null,
+      notes:                canSeeMedical && form.notes.trim() ? form.notes.trim() : null,
+    }
+
+    const { error: err } = await supabase.from('appointments').insert(payload)
 
     setLoading(false)
     if (err) {
@@ -84,9 +125,7 @@ export default function AppointmentForm({ initialDateTime, onAdded, onCancel }) 
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
           <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#3b82f6', boxShadow: '0 0 8px rgba(59,130,246,0.8)' }} />
-          <h2 className="text-sm font-semibold tracking-wide" style={{ color: '#e4e4e7' }}>
-            Nowa wizyta
-          </h2>
+          <h2 className="text-sm font-semibold tracking-wide" style={{ color: '#e4e4e7' }}>Nowa wizyta</h2>
         </div>
         {onCancel && (
           <button
@@ -157,15 +196,11 @@ export default function AppointmentForm({ initialDateTime, onAdded, onCancel }) 
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
-            <div className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center">
-              <svg className="w-3.5 h-3.5" style={{ color: '#52525b' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
+            <SelectChevron />
           </div>
         </div>
 
-        <div className="sm:col-span-2">
+        <div className={doctors.length > 0 || isDoctor ? '' : 'sm:col-span-2'}>
           <label className="block text-xs font-medium mb-1.5 tracking-wide" style={{ color: '#52525b' }}>
             Rodzaj wizyty
           </label>
@@ -179,17 +214,54 @@ export default function AppointmentForm({ initialDateTime, onAdded, onCancel }) 
                 <option key={vt} value={vt}>{vt}</option>
               ))}
             </select>
-            <div className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center">
-              <svg className="w-3.5 h-3.5" style={{ color: '#52525b' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
+            <SelectChevron />
           </div>
         </div>
+
+        {/* Doctor assignment — admin/receptionist only */}
+        {!isDoctor && (
+          <div>
+            <label className="block text-xs font-medium mb-1.5 tracking-wide" style={{ color: '#52525b' }}>
+              Przypisz lekarza
+            </label>
+            <div className="relative">
+              <select
+                value={form.doctor_id}
+                onChange={set('doctor_id')}
+                className="input-dark appearance-none pr-8 cursor-pointer"
+              >
+                <option value="">— brak przypisania —</option>
+                {doctors.map((d) => (
+                  <option key={d.id} value={d.id}>{d.full_name || d.id}</option>
+                ))}
+              </select>
+              <SelectChevron />
+            </div>
+          </div>
+        )}
+
+        {/* Medical notes — admin/doctor only */}
+        {canSeeMedical && (
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-medium mb-1.5 tracking-wide" style={{ color: '#52525b' }}>
+              Notatki medyczne
+            </label>
+            <textarea
+              value={form.notes}
+              onChange={set('notes')}
+              placeholder="Uwagi, obserwacje kliniczne…"
+              rows={3}
+              className="input-dark resize-none"
+              style={{ lineHeight: 1.5 }}
+            />
+          </div>
+        )}
       </div>
 
       {error && (
-        <p className="text-xs mt-4 px-3 py-2 rounded-lg" style={{ color: '#f87171', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.15)' }}>
+        <p className="text-xs mt-4 px-3 py-2 rounded-lg" style={{
+          color: '#f87171', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.15)',
+        }}>
           {error}
         </p>
       )}

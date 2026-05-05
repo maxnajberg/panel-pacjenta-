@@ -49,7 +49,7 @@ const NAV_BTN = {
   userSelect: 'none',
 }
 
-export default function CalendarView({ onAddClick }) {
+export default function CalendarView({ onAddClick, doctorId }) {
   const [calView, setCalView] = useState('week')
   const [currentDate, setCurrentDate] = useState(new Date())
   const [appointments, setAppointments] = useState([])
@@ -63,15 +63,21 @@ export default function CalendarView({ onAddClick }) {
 
   const fetchAppointments = useCallback(async () => {
     const range = getRange()
-    const { data, error } = await supabase
+    let query = supabase
       .from('appointments')
       .select('*')
       .gte('appointment_datetime', range.start)
       .lte('appointment_datetime', range.end)
       .order('appointment_datetime', { ascending: true })
+
+    if (doctorId) {
+      query = query.eq('doctor_id', doctorId)
+    }
+
+    const { data, error } = await query
     if (!error) setAppointments(data ?? [])
     setLoading(false)
-  }, [getRange])
+  }, [getRange, doctorId])
 
   useEffect(() => {
     setLoading(true)

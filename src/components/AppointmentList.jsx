@@ -3,10 +3,10 @@ import { supabase } from '../lib/supabase'
 import StatusBadge from './StatusBadge'
 
 const STATUS_OPTIONS = [
-  { value: 'confirmed', label: 'Potwierdzona' },
-  { value: 'pending', label: 'Oczekuje' },
+  { value: 'confirmed',   label: 'Potwierdzona' },
+  { value: 'pending',     label: 'Oczekuje' },
   { value: 'no_response', label: 'Brak odpowiedzi' },
-  { value: 'cancelled', label: 'Anulowana' },
+  { value: 'cancelled',   label: 'Anulowana' },
 ]
 
 function formatTime(datetimeISO) {
@@ -29,13 +29,9 @@ function CopyLink({ id }) {
       title="Kopiuj link dla pacjenta"
       className="text-xs font-medium transition-all duration-200 whitespace-nowrap px-2.5 py-1 rounded-md"
       style={copied ? {
-        color: '#4ade80',
-        background: 'rgba(74,222,128,0.08)',
-        border: '1px solid rgba(74,222,128,0.2)',
+        color: '#4ade80', background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.2)',
       } : {
-        color: '#3b82f6',
-        background: 'rgba(59,130,246,0.07)',
-        border: '1px solid rgba(59,130,246,0.18)',
+        color: '#3b82f6', background: 'rgba(59,130,246,0.07)', border: '1px solid rgba(59,130,246,0.18)',
       }}
     >
       {copied ? '✓ Skopiowano' : 'Kopiuj link'}
@@ -62,10 +58,8 @@ function StatusSelect({ appointmentId, current, onChanged }) {
         disabled={loading}
         className="appearance-none text-xs pl-2.5 pr-7 py-1.5 rounded-md cursor-pointer focus:outline-none transition-all duration-150 disabled:opacity-40"
         style={{
-          background: '#16161e',
-          border: '1px solid rgba(255,255,255,0.08)',
-          color: '#a1a1aa',
-          fontFamily: 'Inter, system-ui, sans-serif',
+          background: '#16161e', border: '1px solid rgba(255,255,255,0.08)',
+          color: '#a1a1aa', fontFamily: 'Inter, system-ui, sans-serif',
         }}
         onFocus={e => { e.target.style.borderColor = 'rgba(59,130,246,0.4)'; e.target.style.boxShadow = '0 0 0 2px rgba(59,130,246,0.08)' }}
         onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.08)'; e.target.style.boxShadow = 'none' }}
@@ -83,7 +77,10 @@ function StatusSelect({ appointmentId, current, onChanged }) {
   )
 }
 
-export default function AppointmentList({ appointments, onStatusChanged }) {
+export default function AppointmentList({ appointments, onStatusChanged, role }) {
+  // Doctors see medical view (no contact info); admin/receptionist see full view
+  const isDoctor = role === 'doctor'
+
   if (appointments.length === 0) {
     return (
       <div className="text-center py-20" style={{ color: '#27272a' }}>
@@ -93,12 +90,16 @@ export default function AppointmentList({ appointments, onStatusChanged }) {
     )
   }
 
+  const headers = isDoctor
+    ? ['Godzina', 'Pacjent', 'Rodzaj wizyty', 'Notatki', 'Status', 'Zmień status']
+    : ['Godzina', 'Pacjent', 'Telefon', 'Rodzaj wizyty', 'Status', 'Zmień status', 'Link pacjenta']
+
   return (
     <div className="overflow-x-auto rounded-[0.875rem]" style={{ background: '#111118', border: '1px solid rgba(255,255,255,0.07)' }}>
       <table className="w-full text-sm">
         <thead>
           <tr style={{ background: '#0a0a10', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-            {['Godzina', 'Pacjent', 'Telefon', 'Rodzaj wizyty', 'Status', 'Zmień status', 'Link pacjenta'].map((h) => (
+            {headers.map((h) => (
               <th
                 key={h}
                 className="px-5 py-3.5 text-left font-semibold whitespace-nowrap"
@@ -122,12 +123,28 @@ export default function AppointmentList({ appointments, onStatusChanged }) {
               <td className="px-5 py-3.5 font-medium whitespace-nowrap" style={{ color: '#d4d4d8' }}>
                 {appt.patient_name}
               </td>
-              <td className="px-5 py-3.5 whitespace-nowrap" style={{ color: '#71717a', fontVariantNumeric: 'tabular-nums' }}>
-                {appt.phone}
-              </td>
+
+              {/* Phone — hidden for doctors */}
+              {!isDoctor && (
+                <td className="px-5 py-3.5 whitespace-nowrap" style={{ color: '#71717a', fontVariantNumeric: 'tabular-nums' }}>
+                  {appt.phone}
+                </td>
+              )}
+
               <td className="px-5 py-3.5" style={{ color: '#71717a' }}>
                 {appt.visit_type}
               </td>
+
+              {/* Notes — doctors only */}
+              {isDoctor && (
+                <td className="px-5 py-3.5" style={{ color: '#71717a', maxWidth: 200 }}>
+                  {appt.notes
+                    ? <span style={{ fontSize: 12 }}>{appt.notes}</span>
+                    : <span style={{ color: '#27272a', fontSize: 12 }}>—</span>
+                  }
+                </td>
+              )}
+
               <td className="px-5 py-3.5">
                 <StatusBadge status={appt.status} />
               </td>
@@ -138,9 +155,13 @@ export default function AppointmentList({ appointments, onStatusChanged }) {
                   onChanged={onStatusChanged}
                 />
               </td>
-              <td className="px-5 py-3.5">
-                <CopyLink id={appt.id} />
-              </td>
+
+              {/* Copy link — hidden for doctors */}
+              {!isDoctor && (
+                <td className="px-5 py-3.5">
+                  <CopyLink id={appt.id} />
+                </td>
+              )}
             </tr>
           ))}
         </tbody>
