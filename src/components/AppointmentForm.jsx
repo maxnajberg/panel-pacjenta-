@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import IntakeSharePanel from './IntakeSharePanel'
 
 const VISIT_TYPES = [
   'Kontrola',
@@ -62,6 +63,7 @@ export default function AppointmentForm({ initialDateTime, onAdded, onCancel }) 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [doctors, setDoctors] = useState([])
+  const [createdAppt, setCreatedAppt] = useState(null)
 
   const isDoctor = role === 'doctor'
   const canSeeMedical = role === 'admin' || role === 'doctor'
@@ -106,14 +108,28 @@ export default function AppointmentForm({ initialDateTime, onAdded, onCancel }) 
       notes:                canSeeMedical && form.notes.trim() ? form.notes.trim() : null,
     }
 
-    const { error: err } = await supabase.from('appointments').insert(payload)
+    const { data, error: err } = await supabase
+      .from('appointments')
+      .insert(payload)
+      .select('id')
+      .single()
 
     setLoading(false)
     if (err) {
       setError('Błąd zapisu: ' + err.message)
       return
     }
-    onAdded?.()
+    setCreatedAppt({ id: data.id, phone: form.phone.trim() })
+  }
+
+  if (createdAppt) {
+    return (
+      <IntakeSharePanel
+        appointmentId={createdAppt.id}
+        phone={createdAppt.phone}
+        onClose={() => { setCreatedAppt(null); onAdded?.() }}
+      />
+    )
   }
 
   return (

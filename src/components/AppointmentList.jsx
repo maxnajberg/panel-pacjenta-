@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import StatusBadge from './StatusBadge'
+import IntakeSharePanel from './IntakeSharePanel'
 
 const STATUS_OPTIONS = [
   { value: 'confirmed',   label: 'Potwierdzona' },
@@ -17,7 +18,8 @@ function CopyLink({ id }) {
   const [copied, setCopied] = useState(false)
   const url = `${window.location.origin}/confirm/${id}`
 
-  const copy = async () => {
+  const copy = async (e) => {
+    e.stopPropagation()
     await navigator.clipboard.writeText(url)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
@@ -26,7 +28,7 @@ function CopyLink({ id }) {
   return (
     <button
       onClick={copy}
-      title="Kopiuj link dla pacjenta"
+      title="Kopiuj link potwierdzenia"
       className="text-xs font-medium transition-all duration-200 whitespace-nowrap px-2.5 py-1 rounded-md"
       style={copied ? {
         color: '#4ade80', background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.2)',
@@ -39,10 +41,40 @@ function CopyLink({ id }) {
   )
 }
 
+function FormularzButton({ appt }) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <>
+      <button
+        onClick={e => { e.stopPropagation(); setOpen(true) }}
+        title="Wyślij formularz pacjentowi"
+        className="text-xs font-medium transition-all duration-200 whitespace-nowrap px-2.5 py-1 rounded-md"
+        style={appt.patient ? {
+          color: '#4ade80', background: 'rgba(74,222,128,0.07)', border: '1px solid rgba(74,222,128,0.2)',
+        } : {
+          color: '#a78bfa', background: 'rgba(167,139,250,0.07)', border: '1px solid rgba(167,139,250,0.2)',
+        }}
+      >
+        {appt.patient ? '✓ Wypełniony' : 'Formularz'}
+      </button>
+
+      {open && (
+        <IntakeSharePanel
+          appointmentId={appt.id}
+          phone={appt.phone}
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </>
+  )
+}
+
 function StatusSelect({ appointmentId, current, onChanged }) {
   const [loading, setLoading] = useState(false)
 
   const handleChange = async (e) => {
+    e.stopPropagation()
     const newStatus = e.target.value
     setLoading(true)
     await supabase.from('appointments').update({ status: newStatus }).eq('id', appointmentId)
@@ -51,7 +83,7 @@ function StatusSelect({ appointmentId, current, onChanged }) {
   }
 
   return (
-    <div className="relative">
+    <div className="relative" onClick={e => e.stopPropagation()}>
       <select
         value={current}
         onChange={handleChange}
@@ -77,8 +109,7 @@ function StatusSelect({ appointmentId, current, onChanged }) {
   )
 }
 
-export default function AppointmentList({ appointments, onStatusChanged, role }) {
-  // Doctors see medical view (no contact info); admin/receptionist see full view
+export default function AppointmentList({ appointments, onStatusChanged, role, onRowClick }) {
   const isDoctor = role === 'doctor'
 
   if (appointments.length === 0) {
@@ -92,7 +123,7 @@ export default function AppointmentList({ appointments, onStatusChanged, role })
 
   const headers = isDoctor
     ? ['Godzina', 'Pacjent', 'Rodzaj wizyty', 'Notatki', 'Status', 'Zmień status']
-    : ['Godzina', 'Pacjent', 'Telefon', 'Rodzaj wizyty', 'Status', 'Zmień status', 'Link pacjenta']
+    : ['Godzina', 'Pacjent', 'Telefon', 'Rodzaj wizyty', 'Status', 'Zmień status', 'Link pacjenta', 'Formularz']
 
   return (
     <div className="overflow-x-auto rounded-[0.875rem]" style={{ background: '#111118', border: '1px solid rgba(255,255,255,0.07)' }}>
@@ -114,14 +145,27 @@ export default function AppointmentList({ appointments, onStatusChanged, role })
           {appointments.map((appt, i) => (
             <tr
               key={appt.id}
+              onClick={() => onRowClick?.(appt)}
               className="tr-hover"
-              style={{ borderBottom: i < appointments.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}
+              style={{
+                borderBottom: i < appointments.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                cursor: onRowClick ? 'pointer' : 'default',
+              }}
             >
               <td className="px-5 py-3.5 whitespace-nowrap" style={{ fontFamily: 'monospace', fontWeight: 600, color: '#e4e4e7', letterSpacing: '0.02em' }}>
                 {formatTime(appt.appointment_datetime)}
               </td>
-              <td className="px-5 py-3.5 font-medium whitespace-nowrap" style={{ color: '#d4d4d8' }}>
-                {appt.patient_name}
+
+              <td className="px-5 py-3.5 whitespace-nowrap" style={{ color: '#d4d4d8' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                  <span className="font-medium">{appt.patient_name}</span>
+                  {!isDoctor && appt.patient && (
+                    <span
+                      title="Formularz wypełniony"
+                      style={{ width: 7, height: 7, borderRadius: '50%', background: '#4ade80', boxShadow: '0 0 6px rgba(74,222,128,0.6)', flexShrink: 0 }}
+                    />
+                  )}
+                </div>
               </td>
 
               {/* Phone — hidden for doctors */}
@@ -156,11 +200,16 @@ export default function AppointmentList({ appointments, onStatusChanged, role })
                 />
               </td>
 
-              {/* Copy link — hidden for doctors */}
+              {/* Confirm link + formularz buttons — hidden for doctors */}
               {!isDoctor && (
-                <td className="px-5 py-3.5">
-                  <CopyLink id={appt.id} />
-                </td>
+                <>
+                  <td className="px-5 py-3.5">
+                    <CopyLink id={appt.id} />
+                  </td>
+                  <td className="px-5 py-3.5">
+                    <FormularzButton appt={appt} />
+                  </td>
+                </>
               )}
             </tr>
           ))}

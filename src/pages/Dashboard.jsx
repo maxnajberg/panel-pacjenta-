@@ -6,6 +6,7 @@ import AppointmentList from '../components/AppointmentList'
 import AppointmentForm from '../components/AppointmentForm'
 import AppointmentModal from '../components/AppointmentModal'
 import CalendarView from '../components/CalendarView'
+import PatientCard from '../components/PatientCard'
 
 function todayRange() {
   const start = new Date()
@@ -50,6 +51,7 @@ export default function Dashboard() {
   const [filter, setFilter] = useState('all')
   const [showForm, setShowForm] = useState(false)
   const [calAddDatetime, setCalAddDatetime] = useState(null)
+  const [selectedAppt, setSelectedAppt] = useState(null)
 
   const canAddAppointments = role === 'admin' || role === 'receptionist'
 
@@ -57,7 +59,7 @@ export default function Dashboard() {
     const { start, end } = todayRange()
     let query = supabase
       .from('appointments')
-      .select('*')
+      .select('*, patient:patients(*)')
       .gte('appointment_datetime', start)
       .lte('appointment_datetime', end)
       .order('appointment_datetime', { ascending: true })
@@ -312,6 +314,7 @@ export default function Dashboard() {
                 appointments={filtered}
                 onStatusChanged={handleStatusChanged}
                 role={role}
+                onRowClick={setSelectedAppt}
               />
             )}
           </div>
@@ -329,6 +332,14 @@ export default function Dashboard() {
           initialDateTime={calAddDatetime}
           onClose={() => setCalAddDatetime(null)}
           onAdded={() => setCalAddDatetime(null)}
+        />
+      )}
+
+      {selectedAppt && (
+        <PatientCard
+          appointment={selectedAppt}
+          patient={selectedAppt.patient ?? null}
+          onClose={() => setSelectedAppt(null)}
         />
       )}
     </div>

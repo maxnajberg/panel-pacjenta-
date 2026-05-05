@@ -3,6 +3,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Dashboard from './pages/Dashboard'
 import ConfirmPage from './pages/ConfirmPage'
+import IntakeForm from './pages/IntakeForm'
 import LoginPage from './pages/LoginPage'
 import AdminPage from './pages/AdminPage'
 
@@ -13,6 +14,7 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/confirm/:id" element={<ConfirmPage />} />
+          <Route path="/intake/:appointmentId" element={<IntakeForm />} />
           <Route
             path="/"
             element={
