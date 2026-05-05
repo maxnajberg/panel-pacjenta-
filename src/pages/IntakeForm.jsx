@@ -45,12 +45,15 @@ function Textarea({ value, onChange, placeholder }) {
   )
 }
 
-function Field({ label, children }) {
+function Field({ label, hint, children }) {
   return (
     <div>
-      <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#71717a', marginBottom: 6, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+      <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#71717a', marginBottom: hint ? 2 : 6, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
         {label}
       </label>
+      {hint && (
+        <p style={{ fontSize: 11, color: '#52525b', margin: '0 0 8px', lineHeight: 1.4 }}>{hint}</p>
+      )}
       {children}
     </div>
   )
@@ -72,9 +75,57 @@ function SectionCard({ number, title, children }) {
           {title}
         </h2>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
         {children}
       </div>
+    </div>
+  )
+}
+
+function CheckboxGroup({ options, selected, onToggle, otherValue, onOtherChange, otherPlaceholder }) {
+  const hasOther = selected.some(v => v.startsWith('Inne'))
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {options.map(opt => (
+        <label key={opt} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={selected.includes(opt)}
+            onChange={() => onToggle(opt)}
+            style={{ width: 16, height: 16, accentColor: '#3b82f6', cursor: 'pointer', flexShrink: 0 }}
+          />
+          <span style={{ fontSize: 13, color: '#d4d4d8', lineHeight: 1.4 }}>{opt}</span>
+        </label>
+      ))}
+      {hasOther && (
+        <div style={{ marginTop: 2, paddingLeft: 26 }}>
+          <Input
+            value={otherValue}
+            onChange={e => onOtherChange(e.target.value)}
+            placeholder={otherPlaceholder || 'Podaj szczegóły…'}
+          />
+        </div>
+      )}
+    </div>
+  )
+}
+
+function RadioGroup({ name, options, selected, onSelect }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {options.map(opt => (
+        <label key={opt} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+          <input
+            type="radio"
+            name={name}
+            value={opt}
+            checked={selected === opt}
+            onChange={() => onSelect(opt)}
+            style={{ width: 16, height: 16, accentColor: '#3b82f6', cursor: 'pointer', flexShrink: 0 }}
+          />
+          <span style={{ fontSize: 13, color: '#d4d4d8' }}>{opt}</span>
+        </label>
+      ))}
     </div>
   )
 }
@@ -86,10 +137,52 @@ function formatDateTimePL(iso) {
   })
 }
 
+const ALLERGIES = [
+  'Penicylina',
+  'Lateks',
+  'Środki znieczulające (lidokaina)',
+  'Aspiryna / NLPZ',
+  'Jod',
+  'Inne',
+]
+
+const CHRONIC_CONDITIONS = [
+  'Cukrzyca',
+  'Nadciśnienie',
+  'Choroby serca',
+  'Astma',
+  'Epilepsja',
+  'Przyjmuję leki rozrzedzające krew',
+  'Inne',
+]
+
+const INFECTIOUS_DISEASES = [
+  'HIV / AIDS',
+  'WZW typu B (HBV)',
+  'WZW typu C (HCV)',
+  'Gruźlica',
+  'Inne choroby zakaźne',
+]
+
+const DENTAL_VISIT_OPTIONS = [
+  'Mniej niż 6 miesięcy',
+  '6–12 miesięcy',
+  '1–2 lata',
+  'Ponad 2 lata',
+  'Nie pamiętam',
+]
+
 const EMPTY = {
   first_name: '', last_name: '', pesel: '', date_of_birth: '', address: '',
   phone: '', email: '',
-  allergies: '', medications: '', chronic_conditions: '', last_dental_visit: '',
+  allergies_list: [],
+  allergies_other: '',
+  medications: '',
+  chronic_conditions_list: [],
+  chronic_conditions_other: '',
+  infectious_diseases: [],
+  infectious_diseases_other: '',
+  last_dental_visit_choice: '',
   rodo_consent: false,
 }
 
@@ -121,25 +214,40 @@ export default function IntakeForm() {
     setForm((f) => ({ ...f, [field]: val }))
   }
 
+  const toggleItem = (field, item) => {
+    setForm(f => ({
+      ...f,
+      [field]: f[field].includes(item)
+        ? f[field].filter(v => v !== item)
+        : [...f[field], item],
+    }))
+  }
+
+  const setField = (field, value) => setForm(f => ({ ...f, [field]: value }))
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
 
     const { error: err } = await supabase.rpc('submit_intake_form', {
-      p_appointment_id:    appointmentId,
-      p_first_name:        form.first_name.trim(),
-      p_last_name:         form.last_name.trim(),
-      p_pesel:             form.pesel.trim() || null,
-      p_date_of_birth:     form.date_of_birth || null,
-      p_address:           form.address.trim() || null,
-      p_phone:             form.phone.trim() || null,
-      p_email:             form.email.trim() || null,
-      p_allergies:         form.allergies.trim() || null,
-      p_medications:       form.medications.trim() || null,
-      p_chronic_conditions: form.chronic_conditions.trim() || null,
-      p_last_dental_visit:  form.last_dental_visit.trim() || null,
-      p_rodo_consent:      form.rodo_consent,
+      p_appointment_id:            appointmentId,
+      p_first_name:                form.first_name.trim(),
+      p_last_name:                 form.last_name.trim(),
+      p_pesel:                     form.pesel.trim() || null,
+      p_date_of_birth:             form.date_of_birth || null,
+      p_address:                   form.address.trim() || null,
+      p_phone:                     form.phone.trim() || null,
+      p_email:                     form.email.trim() || null,
+      p_allergies_list:            form.allergies_list,
+      p_allergies_other:           form.allergies_other.trim() || null,
+      p_medications:               form.medications.trim() || null,
+      p_chronic_conditions_list:   form.chronic_conditions_list,
+      p_chronic_conditions_other:  form.chronic_conditions_other.trim() || null,
+      p_infectious_diseases:       form.infectious_diseases,
+      p_infectious_diseases_other: form.infectious_diseases_other.trim() || null,
+      p_last_dental_visit_choice:  form.last_dental_visit_choice || null,
+      p_rodo_consent:              form.rodo_consent,
     })
 
     setLoading(false)
@@ -190,7 +298,6 @@ export default function IntakeForm() {
     <div style={{ minHeight: '100vh', background: '#0a0a0a', padding: '28px 16px 64px' }}>
       <div style={{ maxWidth: 520, margin: '0 auto' }}>
 
-        {/* Logo + title */}
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <div style={{
             width: 44, height: 44, borderRadius: 12, margin: '0 auto 12px',
@@ -249,17 +356,50 @@ export default function IntakeForm() {
           </SectionCard>
 
           <SectionCard number={3} title="Historia medyczna">
-            <Field label="Alergie (leki, lateks, środki znieczulające…)">
-              <Textarea value={form.allergies} onChange={set('allergies')} placeholder="Wpisz alergie lub pozostaw puste jeśli brak" />
+            <Field label="Alergie" hint="Zaznacz wszystkie, które dotyczą">
+              <CheckboxGroup
+                options={ALLERGIES}
+                selected={form.allergies_list}
+                onToggle={item => toggleItem('allergies_list', item)}
+                otherValue={form.allergies_other}
+                onOtherChange={v => setField('allergies_other', v)}
+                otherPlaceholder="Opisz alergie…"
+              />
             </Field>
+
+            <Field label="Choroby przewlekłe" hint="Zaznacz wszystkie, które dotyczą">
+              <CheckboxGroup
+                options={CHRONIC_CONDITIONS}
+                selected={form.chronic_conditions_list}
+                onToggle={item => toggleItem('chronic_conditions_list', item)}
+                otherValue={form.chronic_conditions_other}
+                onOtherChange={v => setField('chronic_conditions_other', v)}
+                otherPlaceholder="Opisz choroby…"
+              />
+            </Field>
+
+            <Field label="Choroby zakaźne" hint="Zaznacz wszystkie, które dotyczą — dane widoczne wyłącznie dla lekarza">
+              <CheckboxGroup
+                options={INFECTIOUS_DISEASES}
+                selected={form.infectious_diseases}
+                onToggle={item => toggleItem('infectious_diseases', item)}
+                otherValue={form.infectious_diseases_other}
+                onOtherChange={v => setField('infectious_diseases_other', v)}
+                otherPlaceholder="Opisz choroby zakaźne…"
+              />
+            </Field>
+
             <Field label="Przyjmowane leki">
               <Textarea value={form.medications} onChange={set('medications')} placeholder="Nazwy leków i dawkowanie" />
             </Field>
-            <Field label="Choroby przewlekłe">
-              <Textarea value={form.chronic_conditions} onChange={set('chronic_conditions')} placeholder="Np. cukrzyca, nadciśnienie, choroby serca…" />
-            </Field>
+
             <Field label="Ostatnia wizyta u dentysty">
-              <Input value={form.last_dental_visit} onChange={set('last_dental_visit')} placeholder="Np. rok temu, 2 lata temu, nie pamiętam" />
+              <RadioGroup
+                name="last_dental_visit"
+                options={DENTAL_VISIT_OPTIONS}
+                selected={form.last_dental_visit_choice}
+                onSelect={v => setField('last_dental_visit_choice', v)}
+              />
             </Field>
           </SectionCard>
 

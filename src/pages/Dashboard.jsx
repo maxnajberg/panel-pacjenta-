@@ -340,6 +340,7 @@ export default function Dashboard() {
           appointment={selectedAppt}
           patient={selectedAppt.patient ?? null}
           onClose={() => setSelectedAppt(null)}
+          role={role}
         />
       )}
     </div>
